@@ -22,14 +22,14 @@ Use this together with the full reference in [`API.md`](./API.md).
 - Tenant selector: `X-App-ID: <tenant_id>` (defaults to `drift` if omitted)
 - Auth types:
   - End-user JWT (`Authorization: Bearer <drift_jwt>`) for user flows (rooms, chat, gifts, DMs, wallet)
-  - Tenant API key (`Authorization: Bearer drift_sk_...`) for platform/B2B checks (`/platform/ping`)
+  - Tenant API key (`Authorization: Bearer niilox_sk_...`) for platform/B2B checks (`/platform/ping`)
 
 Important: API keys are not a replacement for end-user session tokens.
 
 ## 2) Minimal integration checklist
 
 1. Choose your tenant id (for example `locust`).
-2. Create or receive a tenant API key (`drift_sk_...`).
+2. Create or receive a tenant API key (`niilox_sk_...`).
 3. Set `X-App-ID` on every request from your app/backend.
 4. Implement user sign-in using native auth endpoints.
 5. Connect WebSocket channels for realtime updates.
@@ -47,7 +47,7 @@ curl -s https://api.driftin.live/health
 
 ```bash
 curl -s https://api.driftin.live/api/v1/platform/ping \
-  -H "Authorization: Bearer drift_sk_your_key_here" \
+  -H "Authorization: Bearer niilox_sk_your_key_here" \
   -H "X-App-ID: locust"
 ```
 
@@ -88,7 +88,7 @@ For private VIP rooms:
 
 - Check access with `GET /rooms/{roomID}/access`
 - Unlock seat with `POST /rooms/{roomID}/access`
-- On 402, show top-up flow (`/tokens/checkout` for web, RevenueCat for mobile)
+- On 402, show top-up flow (`/tokens/checkout` for web, `mobile_iap` for mobile)
 
 ### TypeScript SDK (optional)
 
@@ -132,7 +132,7 @@ Do:
 
 - Keep API keys and JWT refresh tokens server-side where possible.
 - Rotate compromised keys immediately.
-- Verify webhook signatures (Stripe / provider webhooks).
+- Verify webhook signatures (ops-configured payment webhooks).
 - Use `X-App-ID` consistently to preserve tenant isolation.
 
 Do not:
@@ -159,12 +159,12 @@ Web app:
 
 Mobile app:
 
-- Use RevenueCat (`GET /tokens/mobile-config` + RC SDK) for token packs.
+- Use `mobile_iap` (`GET /tokens/mobile-config` + App Store / Play IAP SDK) for token packs.
 - Do not open web checkout in native apps.
 
 Backend-to-backend:
 
-- Use `drift_sk_...` keys for platform checks (`/platform/ping`).
+- Use `niilox_sk_...` keys for platform checks (`/platform/ping`).
 - If your key requires HMAC, include `X-Drift-Timestamp` and `X-Drift-Signature`.
 
 ## 9) Where to go next

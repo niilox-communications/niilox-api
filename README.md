@@ -4,12 +4,14 @@
 
 | | |
 |---|---|
-| **API** | `https://api.driftin.live/api/v1` |
-| **Health** | `https://api.driftin.live/health` |
+| **API** | `https://api.niilox.com/api/v1` |
+| **Health** | `https://api.niilox.com/health` |
 | **Developer portal** | [www.niilox.com](https://www.niilox.com) — keys, billing, usage, in-browser docs |
-| **Status** | [status.driftin.live](https://status.driftin.live) |
+| **Support** | dev@niilox.com (uptime & SLA — no public status page with internal hostnames) |
 
-Every request needs header **`X-App-ID: <your_tenant>`**. User actions use a session JWT; server integrations use **`drift_sk_…`** API keys.
+Every request needs header **`X-App-ID: <your_tenant>`**. User actions use a session JWT; server integrations use **`niilox_sk_…`** API keys.
+
+> **Start here:** [**Developer workflow**](./DEVELOPER_WORKFLOW.md) — sign-up → SDK → P2P/messaging → BYO storage (no broadcast SFU required).
 
 > **Public docs:** Step-by-step flows for VIP access, worker safety, geofence logic, and payment transactions are provided to registered developers. Contact **dev@niilox.com** for the full integration guide.
 
@@ -17,18 +19,16 @@ Every request needs header **`X-App-ID: <your_tenant>`**. User actions use a ses
 
 ## Platform progress & what's left
 
-**→ [PLATFORM_STATUS.md](./PLATFORM_STATUS.md)** — full stack: Go API, LiveKit, P2P, GeoGig, Rodent, frontends, SDK, migrations, ops backlog.
+**→ [PLATFORM_STATUS.md](./PLATFORM_STATUS.md)** — backend progress (operator doc).
 
 Quick summary:
 
 | Layer | Status |
 |-------|--------|
 | Go API + Postgres + native auth | **Production** |
-| Drift livestream (LiveKit) | **Production** |
-| GeoGig gigs, identity, safety, P2P video | **Production** |
-| Rodent peer, Drop, bookings | **Production** |
-| `@niilox/sdk` | **v0.1 beta** — 24 TS modules + `seats`; not on npm |
-| npm publish, integration tests, full GeoGig SDK migration | **Left** |
+| P2P calls, DMs, Rodent / GeoGig | **Production** |
+| `@niilox/sdk` + `@niilox/kyc-ng` | **v0.1 beta** — monorepo |
+| driftin.live livestream (reference) | **Production** — `drift` tenant only |
 
 ---
 
@@ -39,18 +39,18 @@ Quick summary:
 **2. Ping the API** with your key:
 
 ```bash
-curl -s https://api.driftin.live/health
+curl -s https://api.niilox.com/health
 # {"ok":true}
 
-curl -s https://api.driftin.live/api/v1/platform/ping \
-  -H "Authorization: Bearer drift_sk_YOUR_KEY" \
+curl -s https://api.niilox.com/api/v1/platform/ping \
+  -H "Authorization: Bearer niilox_sk_YOUR_KEY" \
   -H "X-App-ID: myapp"
 ```
 
 **3. Sign in a test user** (guest, 24 h):
 
 ```bash
-curl -s https://api.driftin.live/api/v1/auth/guest \
+curl -s https://api.niilox.com/api/v1/auth/guest \
   -H "X-App-ID: myapp" \
   -H "Content-Type: application/json" \
   -d "{}"
@@ -71,8 +71,8 @@ SDK detail: monorepo `packages/niilox-sdk/README.md` (not on npm yet).
 
 | Guide | For |
 |-------|-----|
-| [**Platform status**](./PLATFORM_STATUS.md) | **Full backend + frontends + what's left** |
-| **SDK** | `@niilox/sdk` v0.1 — 24 modules incl. `seats`, gifts, P2P (monorepo; not on npm) |
+| [**Developer workflow**](./DEVELOPER_WORKFLOW.md) | **Recommended path** — P2P, messaging, BYO storage |
+| [**Platform status**](./PLATFORM_STATUS.md) | Operator backlog |
 
 ### Start here
 
@@ -88,25 +88,26 @@ SDK detail: monorepo `packages/niilox-sdk/README.md` (not on npm yet).
 | Guide | For |
 |-------|-----|
 | [**Native auth**](./NATIVE_AUTH.md) | Google, Apple, magic link, **phone SMS OTP**, passwords |
+| [**SMS API**](./SMS.md) | Bulk SMS, sender config, phone numbers (`client.sms`, `client.numbers`) |
 | [**Authentication overview**](./AUTHENTICATION.md) | JWT model, guest tokens, refresh |
 
 ### Products on Niilox
 
 | Guide | Tenant | Stack |
 |-------|--------|-------|
+| [**Peer signaling**](./PEER_SIGNAL.md) | `rodent`, `geogig` | WebRTC ICE + signal — default for calls |
 | [**GeoGig**](./GEOGIG.md) | `geogig` | Gigs, fiat checkout, P2P video, worker safety |
-| [**Peer signaling**](./PEER_SIGNAL.md) | `rodent`, `geogig` | WebRTC ICE + signal — **not LiveKit** |
 | [**Worker safety**](./WORKER_SAFETY.md) | `geogig` (+ others) | Field-worker safety — guide on request |
-| Live video, chat, gifts | `drift` | See [API reference](./API.md) — rooms, LiveKit, VIP |
+| driftin.live livestream | `drift` only | Reference app — contact dev@niilox.com for room routes |
 
-Reference apps: [GeoGig](https://github.com/Dr-M06/geogig) · [Drift](https://driftin.live)
+Reference apps: [GeoGig](https://github.com/Dr-M06/geogig) · [Drift](https://driftin.live) (reference)
 
 ### Payments & no-code
 
 | Guide | For |
 |-------|-----|
-| [**Payments**](./PAYMENTS.md) | Token packs, Stripe / Flutterwave, webhooks |
-| [**Mobile payments**](./MOBILE_PAYMENTS.md) | RevenueCat / App Store / Play |
+| [**Payments**](./PAYMENTS.md) | Token packs, Niilox hosted checkout, webhooks |
+| [**Mobile payments**](./MOBILE_PAYMENTS.md) | `mobile_iap` channel / App Store / Play |
 | [**Bubble.io**](./BUBBLE_IO.md) | No-code API Connector setup |
 
 ### Platform
@@ -134,7 +135,7 @@ Reference apps: [GeoGig](https://github.com/Dr-M06/geogig) · [Drift](https://dr
 
 | Credential | Header | Used for |
 |------------|--------|----------|
-| **Tenant API key** | `Authorization: Bearer drift_sk_…` | Server / Bubble backend — `/platform/*` |
+| **Tenant API key** | `Authorization: Bearer niilox_sk_…` | Server / Bubble backend — `/platform/*` |
 | **User session JWT** | `Authorization: Bearer <access_token>` | End users — rooms, gigs, chat, wallet |
 
 ---

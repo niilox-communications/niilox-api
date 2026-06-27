@@ -33,13 +33,13 @@ Production uses **native auth** (no Supabase). OAuth callback is outside `/api/v
 | Method | Path | Auth | Body | Returns |
 |--------|------|------|------|---------|
 | POST | `/auth/google/init` | — | — | `{"url":"<google_oauth_url>"}` — start Google sign-in. |
-| POST | `/auth/magic/send` | — | `{"email":"..."}` | `204` — sends magic link via Resend. |
+| POST | `/auth/magic/send` | — | `{"email":"..."}` | `204` — sends magic link via Niilox email. |
 | POST | `/auth/magic/verify` | — | `{"token":"..."}` | `{"token":"<access>", "refresh_token":"<refresh>", "user_id":"<uuid>"}` |
-| POST | `/auth/phone/send` | — | `{"phone":"+234..."}` | `204` — sends OTP (when Africa's Talking configured). |
+| POST | `/auth/phone/send` | — | `{"phone":"+234..."}` | `204` — sends OTP when SMS is enabled on the tenant. |
 | POST | `/auth/phone/verify` | — | `{"phone":"+234...", "code":"123456"}` | Same shape as magic verify. |
 | POST | `/auth/password/login` | — | `{"email":"...", "password":"..."}` | Same shape as magic verify. |
 | POST | `/auth/password/register` | — | `{"email":"...", "password":"...", "name"?}` | Creates account + password (min 8 chars). `409` if password already set. |
-| POST | `/auth/password/forgot` | — | `{"email":"...", "finish_url"?}` | `{"ok":true}` — emails a 15-minute reset link when the account has a password. Always returns `ok` (no email enumeration). Requires Resend. Mobile: `finish_url` e.g. `geogig://reset-password`. |
+| POST | `/auth/password/forgot` | — | `{"email":"...", "finish_url"?}` | `{"ok":true}` — emails a 15-minute reset link when the account has a password. Always returns `ok` (no email enumeration). Requires Niilox email. Mobile: `finish_url` e.g. `geogig://reset-password`. |
 | POST | `/auth/password/reset` | — | `{"token":"...", "password":"..."}` | Same shape as magic verify — sets password and signs in. |
 | POST | `/auth/password/set` | **JWT** | `{"password":"..."}` or `{"new_password":"...", "password":"<current>"}` | `204` — set or change password. |
 | POST | `/auth/apple` | — | `{"identity_token":"..."}` | Same shape as magic verify. |
@@ -66,15 +66,15 @@ Access tokens are HS256 JWTs (7-day TTL). Refresh tokens are opaque (30-day TTL,
 |--------|------|------|-------------|
 | GET | `/rooms` | optional | List active rooms for the current tenant. Optional `?category=fun|music|sports|gossip|vibe|adult`. |
 | GET | `/rooms/{roomID}` | optional | Single room metadata with live viewer count. |
-| POST | `/rooms` | **registered** | Body: `{"title":"...","category":"vibe","is_adult":false,"is_private":false,"entry_price_tokens":0,"seat_limit":0}`. Creates one active room per host. Adult rooms require `apps.allow_adult = true` **and** the host to have `users.id_verified = true`. Private (VIP) rooms accept tokens at the door — see **Private VIP rooms** below. Returns LiveKit token + room name. |
+| POST | `/rooms` | **registered** | Body: `{"title":"...","category":"vibe","is_adult":false,"is_private":false,"entry_price_tokens":0,"seat_limit":0}`. Creates one active room per host. Adult rooms require `apps.allow_adult = true` **and** the host to have `users.id_verified = true`. Private (VIP) rooms accept tokens at the door — see **Private VIP rooms** below. Returns Niilox livestream token + room name (`drift` tenant / broadcast SFU only). |
 | DELETE | `/rooms/active` | **registered** | Ends the caller's currently active room. |
 | DELETE | `/rooms/{roomID}` | **registered** | Ends a specific room (only owner). |
-| POST | `/rooms/{roomID}/join` | yes | Issues a viewer LiveKit token. Adult rooms reject guests and unverified users. Private rooms return **402** with the paywall snapshot if the caller hasn't paid (host is always exempt). |
-| POST | `/rooms/{roomID}/leave` | yes | 204 (the client side closes the LiveKit connection). |
+| POST | `/rooms/{roomID}/join` | yes | Issues a viewer Niilox livestream token. Adult rooms reject guests and unverified users. Private rooms return **402** with the paywall snapshot if the caller hasn't paid (host is always exempt). |
+| POST | `/rooms/{roomID}/leave` | yes | 204 (the client side closes the livestream connection). |
 | GET | `/rooms/{roomID}/presence` | yes | `{count, viewers:[{user_id, username, avatar_url}]}` snapshot. |
 | GET | `/rooms/{roomID}/access` | yes | VIP paywall snapshot — see **Private VIP rooms** below. Safe on public rooms (returns `has_access=true`, `is_private=false`). |
 | POST | `/rooms/{roomID}/access` | **registered** | Grants VIP access (token spend). Returns paywall snapshot on success or when payment is required. Idempotent for callers who already paid. Contact **dev@niilox.com** for full flow documentation. |
-| POST | `/rooms/{roomID}/thumbnail` | **registered, host-only** | Raw JPEG body (`Content-Type: image/jpeg`, max 300 kb). The host's browser captures a frame from the local camera every ~30 s and POSTs it; the API uploads to Bunny at `thumbnails/{room_id}.jpg` (per-tenant zone) and updates `rooms.thumbnail_url` with a cache-busted CDN URL. Returns `{thumbnail_url}`. Lobby list responses include the latest `thumbnail_url` so cards can render a real preview instead of an avatar gradient. |
+| POST | `/rooms/{roomID}/thumbnail` | **registered, host-only** | Raw JPEG body (`Content-Type: image/jpeg`, max 300 kb). The host's browser captures a frame from the local camera every ~30 s and POSTs it; the API uploads to Niilox media storage at `thumbnails/{room_id}.jpg` (per-tenant zone) and updates `rooms.thumbnail_url` with a cache-busted tenant CDN URL. Returns `{thumbnail_url}`. Lobby list responses include the latest `thumbnail_url` so cards can render a real preview instead of an avatar gradient. |
 
 ### Private VIP rooms
 
@@ -109,10 +109,10 @@ A room caps at 4 publishers (1 host + 3 guests).
 | GET | `/rooms/{roomID}/stage` | yes | `{roster, requests, capacity, filled}` snapshot. |
 | POST | `/rooms/{roomID}/stage/request` | **registered** | Viewer requests to go on stage. |
 | DELETE | `/rooms/{roomID}/stage/request` | **registered** | Viewer cancels their own request. |
-| POST | `/rooms/{roomID}/stage/approve/{userID}` | **registered, host-only** | Promotes a requester. Grants `CanPublish=true` on LiveKit. |
+| POST | `/rooms/{roomID}/stage/approve/{userID}` | **registered, host-only** | Promotes a requester. Grants `CanPublish=true` on the broadcast SFU. |
 | POST | `/rooms/{roomID}/stage/deny/{userID}` | **registered, host-only** | Rejects a request. |
 | POST | `/rooms/{roomID}/stage/remove/{userID}` | **registered, host or self** | Drops a guest publisher (revokes publish rights). |
-| POST | `/rooms/{roomID}/stage/mute/{userID}` | **registered, host-only** | Body: `{"muted":true|false}`. Server-side mute (LiveKit Cloud disables remote unmute — the API still returns 204 and emits `stage:muted` so the guest's client can unmute locally). |
+| POST | `/rooms/{roomID}/stage/mute/{userID}` | **registered, host-only** | Body: `{"muted":true|false}`. Server-side mute (the broadcast SFU disables remote unmute — the API still returns 204 and emits `stage:muted` so the guest's client can unmute locally). |
 | POST | `/rooms/{roomID}/stage/leave` | **registered** | Caller leaves the stage. |
 
 ## Moderation
@@ -122,7 +122,7 @@ A room caps at 4 publishers (1 host + 3 guests).
 | GET | `/rooms/{roomID}/moderation` | yes | `{muted: [...], banned: [...]}` with expiry timestamps. |
 | POST | `/rooms/{roomID}/moderation/mute/{userID}` | **registered** | Mutes the target's chat for 10 minutes. |
 | DELETE | `/rooms/{roomID}/moderation/mute/{userID}` | **registered** | Clears the mute. |
-| POST | `/rooms/{roomID}/moderation/kick/{userID}` | **registered** | Kicks the target from LiveKit + WS; blocks rejoin for 15 minutes. |
+| POST | `/rooms/{roomID}/moderation/kick/{userID}` | **registered** | Kicks the target from the broadcast SFU + WS; blocks rejoin for 15 minutes. |
 
 ## Social
 
@@ -140,7 +140,7 @@ A room caps at 4 publishers (1 host + 3 guests).
 |--------|------|------|-------------|
 | GET | `/dms` | yes | Conversations ordered by latest message. |
 | GET | `/dms/{userID}` | yes | Last 100 messages with this peer. |
-| POST | `/dms/{userID}` | yes | Body: `{"text":"...","media_url":"..."}` (≤500 chars; media must be a Bunny URL we issued). |
+| POST | `/dms/{userID}` | yes | Body: `{"text":"...","media_url":"..."}` (≤500 chars; media must be a tenant CDN URL we issued). |
 | DELETE | `/dms/{messageID}` | yes | Removes a DM the **caller sent** (sender-only). `{messageID}` is the DM's own primary key, not the peer user id. Pushes `dm:deleted` on `/ws/me` to both sender and recipient so the message disappears across every open device. 404 on any non-owner or missing id. |
 | POST | `/dms/{userID}/typing` | yes | Fires `dm:typing` to the recipient's personal channel. Fire-and-forget. |
 | POST | `/dms/media` | yes | `multipart/form-data`, field `file`. JPEG / PNG / WebP / GIF ≤8 MB. Returns `{"media_url":"..."}`. |
@@ -170,9 +170,31 @@ Web (PWA) and native (iOS/Android) device registration. Sending (`POST /push/sen
 
 SDK: `client.push` (subscribe, native token register). Category admin is portal-only today.
 
+## SMS & phone numbers
+
+Transactional SMS for integrators. Requires a tenant API key with **`sms:send`** scope (or admin JWT). Delivery is operated by Niilox — no carrier credentials on the integrator side.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/sms/status` | **api key or admin JWT** | Whether SMS is enabled for the tenant. |
+| GET | `/sms/sender` | **api key or admin JWT** | Per-tenant sender (`sms_from` or `sms_messaging_profile_id`). |
+| PATCH | `/sms/sender` | **api key (`write` / `sms:send`)** | Update sender for the tenant. |
+| POST | `/sms/send` | **api key (`sms:send`)** | Body: `{"to":"+E164","message":"..."}`. |
+| POST | `/sms/bulk` | **api key (`sms:send`)** | Body: `{"to":["+…"],"message":"…"}` or `{"messages":[{"to":"+…","message":"…"}]}`. Max 100 recipients (configurable). |
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/numbers/status` | **api key or admin JWT** | Whether number search/purchase is available. |
+| GET | `/numbers/markets` | **api key or admin JWT** | Supported countries (pricing TBD). |
+| GET | `/numbers` | **api key or admin JWT** | Purchased inventory + configured sender. |
+| POST | `/numbers/search` | **api key** | Search inventory (501 until live in most markets). |
+| POST | `/numbers/purchase` | **api key** | Purchase a number (501 until live). |
+
+Full guide: [SMS.md](./SMS.md). SDK: `client.sms`, `client.numbers`.
+
 ## Platform (B2B API keys)
 
-Tenant integrators authenticate with `Authorization: Bearer drift_sk_…` plus `X-App-ID`. When `hmac_required` is true on the key, also send `X-Drift-Timestamp` (unix seconds) and `X-Drift-Signature` (hex HMAC-SHA256 of `{ts}\n{METHOD}\n{path}\n{sha256(body)}`).
+Tenant integrators authenticate with `Authorization: Bearer niilox_sk_…` plus `X-App-ID`. When `hmac_required` is true on the key, also send `X-Drift-Timestamp` (unix seconds) and `X-Drift-Signature` (hex HMAC-SHA256 of `{ts}\n{METHOD}\n{path}\n{sha256(body)}`).
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
@@ -184,6 +206,8 @@ Tenant integrators authenticate with `Authorization: Bearer drift_sk_…` plus `
 | GET | `/platform/usage/timeseries?days=30` | **admin JWT** | Daily usage trend for charts (`new_users`, `rooms_started`, `chat_messages`, `token_purchases`, `gift_tokens`). |
 | GET | `/platform/usage/geo?days=30` | **admin JWT** | API request geo split by country code (`CF-IPCountry`) with request, 4xx, and 5xx totals. |
 | GET | `/platform/keys` | **admin JWT** | List API keys for the tenant (secrets never returned). |
+| GET | `/platform/sms` | **admin JWT** | Per-tenant SMS sender config (same shape as `/sms/sender`). |
+| PATCH | `/platform/sms` | **admin JWT** | Update sender for the tenant. |
 | POST | `/platform/keys` | **admin JWT** | Body: `{"name","scopes":["read"],"hmac_required":false}`. Returns the full `secret` once. |
 | DELETE | `/platform/keys/{keyID}` | **admin JWT** | Revoke a key. |
 | POST | `/platform/keys/{keyID}/rotate` | **admin JWT** | Revoke + mint replacement; returns new `secret` once. |
@@ -191,7 +215,7 @@ Tenant integrators authenticate with `Authorization: Bearer drift_sk_…` plus `
 
 **Admin UI:** [www.niilox.com](https://www.niilox.com) — partner admin access via **dev@niilox.com**.
 
-All `/api/v1` routes are rate-limited per IP and per `X-App-ID` (Redis when `REDIS_URL` is set). **Video routes** (`POST /rooms/{id}/join`, go-live, LiveKit tokens) still require a normal user JWT — API keys do not replace end-user sessions.
+All `/api/v1` routes are rate-limited per IP and per `X-App-ID` (Redis when `REDIS_URL` is set). **Video routes** (`POST /rooms/{id}/join`, go-live, livestream tokens) still require a normal user JWT — API keys do not replace end-user sessions.
 
 ## Wallet & withdrawals
 
@@ -208,11 +232,11 @@ All `/api/v1` routes are rate-limited per IP and per `X-App-ID` (Redis when `RED
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/tokens/packs` | — | Static catalog. Each pack includes `store_product_id` for App Store / Play (mobile ignores on web). |
-| GET | `/tokens/mobile-config` | — | Mobile only: `{ provider: "revenuecat", revenuecat_api_key_apple, revenuecat_api_key_google, packs }`. Use with `react-native-purchases`; do not use `/tokens/checkout` on native. |
-| POST | `/tokens/checkout` | **registered** | **Web only.** Body: `{"pack_id":"pack_150","return":"/lobby/all"}`. Stripe/Flutterwave checkout URL. Mobile must use RevenueCat IAP instead. |
+| GET | `/tokens/mobile-config` | — | Mobile only: `{ channel: "mobile_iap", mobile_iap_keys, packs }`. Use with your App Store / Play IAP SDK; do not use `/tokens/checkout` on native. |
+| POST | `/tokens/checkout` | **registered** | **Web only.** Body: `{"pack_id":"pack_150","return":"/lobby/all"}`. Niilox hosted checkout URL (`card` or `bank` channel). Mobile must use `mobile_iap` instead. |
 | POST | `/payments/checkout` | **registered** | Alias of `/tokens/checkout` — provider-neutral name. |
 | POST | `/payments/fiat/booking` | **registered** | **Rodent only.** Paid session booking checkout — integration guide on request. |
-| POST | `/payments/fiat/gig` | **registered** | **Geo-Gig only.** Poster pays gig price via Stripe or Flutterwave. Worker payout on check-out — integration guide on request. |
+| POST | `/payments/fiat/gig` | **registered** | **Geo-Gig only.** Poster pays gig price via Niilox hosted checkout (`card` or `bank`). Worker payout on check-out — integration guide on request. |
 
 ## Scheduled sessions
 
@@ -249,7 +273,7 @@ Local chore/help listings for the [GeoGig](https://github.com/Dr-M06/geogig) mob
 | POST | `/gigs/{id}/no-show` | **registered** | Report no-show. |
 | POST | `/gigs/{id}/dispute` | **registered** | Open a dispute on an active/completed gig. |
 | POST | `/gigs/{id}/image` | **registered** | `multipart/form-data` gig photo (JPEG/PNG/WebP). |
-| POST | `/gigs/{id}/video-call` | **registered** | Ring the other party for P2P video glance (uses peer signaling, not LiveKit). |
+| POST | `/gigs/{id}/video-call` | **registered** | Ring the other party for P2P video glance (uses peer signaling). |
 | GET | `/gigs/{id}/session` | **registered** | Live session state (check-in/out, location trust). |
 | GET | `/gigs/{id}/location-trail` | **registered** | Worker location history for the session (poster view). |
 | POST | `/gigs/{id}/location` | **registered** | Worker GPS ping while gig is accepted. Rate-limited. |
@@ -327,7 +351,7 @@ WebRTC signaling and encrypted async file handoff for the `rodent` tenant. Not d
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/verification/me` | **registered** | `{id_verified, verified_at, status}` (status is the latest submission). |
-| POST | `/verification/submit` | **registered** | `multipart/form-data` with two fields: `doc` and `selfie`. Each ≤8 MB. Files upload to Bunny under `verify/{user_id}/`. |
+| POST | `/verification/submit` | **registered** | `multipart/form-data` with two fields: `doc` and `selfie`. Each ≤8 MB. Files upload to Niilox media storage under `verify/{user_id}/`. |
 | GET | `/admin/verifications` | **admin** | Pending queue (oldest first). |
 | POST | `/admin/verifications/{id}/approve` | **admin** | Marks `users.id_verified = true`. |
 | POST | `/admin/verifications/{id}/reject` | **admin** | Rejects without flipping the verified flag. |
@@ -336,12 +360,14 @@ WebRTC signaling and encrypted async file handoff for the `rodent` tenant. Not d
 
 ## Webhooks
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/webhook/livekit` | LiveKit auth-header HMAC | Ingests LiveKit Cloud webhooks. `room_finished` ends the matching DB row. `track_published` starts a quality watch in the Rust media-svc when enabled. The handler infers `app_id` from the LiveKit room name (`{app}::{host}::{ts}`). |
-| POST | `/webhooks/stripe` | Stripe-Signature | Credits tokens on `checkout.session.completed`. Idempotent: only updates rows still in `pending`. |
-| POST | `/webhooks/revenuecat` | `Authorization: Bearer <REVENUECAT_WEBHOOK_AUTH>` | **Mobile only.** Credits tokens on `INITIAL_PURCHASE` / `NON_RENEWING_PURCHASE`; clawback on `REFUND`. See [MOBILE_PAYMENTS.md](./MOBILE_PAYMENTS.md). |
-| POST | `/webhooks/payments/{provider}` | provider-specific | Generic provider webhook. Today routes to Stripe (`stripe`) or Flutterwave (`flutterwave`). Adding a new provider only requires implementing `payments.Provider`. |
+Inbound payment and livestream webhooks are **configured by Niilox ops** per tenant — integrators do not register provider-specific URL paths. Contact **dev@niilox.com** for webhook setup.
+
+| Category | Auth | Description |
+|----------|------|-------------|
+| Livestream (drift) | HMAC (ops-provisioned) | `room_finished` ends the matching DB row. `track_published` starts a quality watch in the Rust media-svc when enabled. The handler infers `app_id` from the room name (`{app}::{host}::{ts}`). |
+| Card / bank checkout | Signed payload (ops-provisioned) | Credits tokens on completed checkout. Idempotent: only updates rows still in `pending`. |
+| Mobile IAP (`mobile_iap`) | Bearer token (ops-provisioned) | **Mobile only.** Credits tokens on purchase; clawback on refund. See [MOBILE_PAYMENTS.md](./MOBILE_PAYMENTS.md). |
+| Generic payments | Provider-specific (ops-provisioned) | Routes by payment channel (`card`, `bank`, `mobile_iap`). |
 
 ## WebSockets
 

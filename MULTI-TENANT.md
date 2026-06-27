@@ -9,11 +9,11 @@
 
 Tenants do **not** share:
 
-- LiveKit projects (each tenant has its own host, key, secret),
-- Bunny.net storage zones,
-- payment provider credentials,
+- broadcast SFU projects (each tenant has its own host, key, secret — `drift` reference app only),
+- Niilox media storage zones,
+- payment channel credentials,
 - adult-content policy (`apps.allow_adult`),
-- user identities (the same Supabase account can have separate user rows per tenant).
+- user identities (the same account can have separate user rows per tenant).
 
 ## The `apps` table
 
@@ -23,45 +23,36 @@ Created by `migrations/008_apps.sql`:
 CREATE TABLE apps (
   id                TEXT PRIMARY KEY,
   name              TEXT NOT NULL,
-  livekit_host      TEXT NOT NULL DEFAULT '',
-  livekit_key       TEXT NOT NULL DEFAULT '',
-  livekit_secret    TEXT NOT NULL DEFAULT '',
-  bunny_zone        TEXT NOT NULL DEFAULT '',
-  bunny_key         TEXT NOT NULL DEFAULT '',
-  bunny_cdn         TEXT NOT NULL DEFAULT '',
-  bunny_region      TEXT NOT NULL DEFAULT '',
-  payment_provider  TEXT NOT NULL DEFAULT 'stripe',
+  sfu_host          TEXT NOT NULL DEFAULT '',
+  sfu_key           TEXT NOT NULL DEFAULT '',
+  sfu_secret        TEXT NOT NULL DEFAULT '',
+  media_zone        TEXT NOT NULL DEFAULT '',
+  media_key         TEXT NOT NULL DEFAULT '',
+  media_cdn         TEXT NOT NULL DEFAULT '',
+  media_region      TEXT NOT NULL DEFAULT '',
+  payment_channel   TEXT NOT NULL DEFAULT 'card',
   allow_adult       BOOLEAN NOT NULL DEFAULT false,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-`apps.id` is the value that clients send in `X-App-ID`. The default tenant id is `drift` and is upserted automatically on boot from the env-var credentials (`LIVEKIT_*`, `BUNNY_*`).
+> **Note:** Production column names may differ; Niilox ops maps credentials into `apps` on provision. Integrators only need `X-App-ID`.
+
+`apps.id` is the value that clients send in `X-App-ID`. The default tenant id is `drift` and is upserted automatically on boot from ops-provisioned credentials.
 
 ## Adding a new tenant
 
-```sql
-INSERT INTO apps (
-  id, name,
-  livekit_host, livekit_key, livekit_secret,
-  bunny_zone, bunny_key, bunny_cdn, bunny_region,
-  payment_provider, allow_adult
-) VALUES (
-  'rabbaly',
-  'Rabbaly',
-  'wss://rabbaly.livekit.cloud',
-  'APIxxxxxxxxxxxx',
-  'secretxxxxxxxxx',
-  'rabbaly-media',
-  'storage-zone-password',
-  'https://rabbaly.b-cdn.net',
-  '',                        -- empty = EU
-  'flutterwave',
-  false
-);
-```
+New tenants are provisioned via the [developer portal](https://www.niilox.com) or by Niilox ops. Example of what gets stored per tenant:
 
-Restart the API (or wait until `apps.Registry.Load` is re-invoked on next deploy). Clients then call:
+| Field | Example |
+|-------|---------|
+| `id` | `rabbaly` |
+| SFU host | `wss://sfu.example.com` (drift-style livestream only) |
+| Media zone | `rabbaly-media` |
+| Media CDN | `https://cdn.example.com` |
+| Payment channel | `card` or `bank` |
+
+Clients then call:
 
 ```
 GET /api/v1/rooms
@@ -69,7 +60,7 @@ Authorization: Bearer <user_jwt>
 X-App-ID: rabbaly
 ```
 
-and get only Rabbaly rooms, Rabbaly LiveKit tokens, Rabbaly notifications.
+and get only Rabbaly rooms, Rabbaly livestream tokens, Rabbaly notifications.
 
 ## How the API knows the tenant
 
@@ -83,33 +74,29 @@ ctx = context.WithValue(ctx, AppKey, app)
 
 Handlers then call `middleware.GetApp(ctx)` or `middleware.GetAppID(ctx)`.
 
-## LiveKit room names
+## Livestream room names (`drift` tenant)
 
-`tenant.RoomName(appID, hostID)` builds `{appID}::{hostID}::{yyyymmddhhmmss}` so a LiveKit webhook can recover the tenant from the room name even though webhooks don't carry custom headers:
+`tenant.RoomName(appID, hostID)` builds `{appID}::{hostID}::{yyyymmddhhmmss}` so a livestream webhook can recover the tenant from the room name even though webhooks don't carry custom headers:
 
 ```go
-func ParseRoomAppID(livekitRoom string) string {
-    if i := strings.Index(livekitRoom, "::"); i > 0 {
-        return livekitRoom[:i]
+func ParseRoomAppID(roomName string) string {
+    if i := strings.Index(roomName, "::"); i > 0 {
+        return roomName[:i]
     }
     return "drift"
 }
 ```
 
-`webhook.LiveKitHandler.Handle`, `moderation.Manager.lkForRoom`, and `stage.Manager.lkForRoom` all use this to dispatch to the right tenant's LiveKit credentials.
+Webhook handlers and moderation/stage managers use this to dispatch to the right tenant's SFU credentials.
 
 ## Per-tenant services
 
-`apps.Registry` exposes:
+`apps.Registry` exposes lazy-cached clients per tenant:
 
-```go
-registry.LiveKit(app)  // *livekit.Service — caches one per app.ID
-registry.Bunny(app)    // *bunny.Client    — caches one per app.ID
-```
+- **Livestream SFU** — broadcast rooms (`drift` reference app)
+- **Media storage** — avatars, DMs, ID docs, thumbnails
 
-Both are lazy. The first call instantiates and caches; later calls hit the `sync.Map`.
-
-Payments are handled by `payments.Registry`, which is process-wide (one `stripe` provider, one `flutterwave` provider) — the tenant only chooses **which** provider to use via `apps.payment_provider`.
+Payments are handled by `payments.Registry`, which is process-wide — the tenant chooses **which channel** to use via `apps.payment_channel` (`card`, `bank`, or `mobile_iap`).
 
 ## Data isolation
 

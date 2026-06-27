@@ -74,7 +74,7 @@ const ws = new WebSocket(
 
 ## Drop-off (Rodent Pro)
 
-Encrypted file links for signed-in Pro users. Uses the **same** `BUNNY_STORAGE_*` env as avatars/DM media — no separate Rodent storage zone.
+Encrypted file links for signed-in Pro users. Uses the **same** Niilox media storage credentials as avatars/DM media — no separate Rodent storage zone.
 
 | Method | Path | Auth |
 |--------|------|------|
@@ -89,17 +89,17 @@ Set `DROP_ENABLED=false` to disable. Expired drops are purged by a background wo
 
 ## Paid session bookings
 
-Rodent hosts can take **paid session bookings** (card checkout via Stripe) while media still runs peer-to-peer in the room. API routes (`X-App-ID: rodent`):
+Rodent hosts can take **paid session bookings** (card checkout via Niilox hosted checkout) while media still runs peer-to-peer in the room. API routes (`X-App-ID: rodent`):
 
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/api/v1/rodent/hosts/{hostID}/booking-page` | Public — host profile + occupied slots |
 | GET/PUT | `/api/v1/rodent/booking-settings` | Host default `price_cents` (Pro if &gt; 0) |
 | POST | `/api/v1/rodent/bookings` | **Registered** — creates `scheduled_streams` row |
-| POST | `/api/v1/payments/fiat/booking` | **Registered** — Stripe Checkout for paid bookings |
+| POST | `/api/v1/payments/fiat/booking` | **Registered** — Niilox hosted checkout for paid bookings |
 
 Calendar slots and Google Calendar OAuth: `/api/v1/scheduled`, `/api/v1/integrations/google/calendar/*`. See [`API.md`](./API.md).
 
 ## Disable
 
-`PEER_SIGNAL_ENABLED=false` — Drift live rooms (`/ws/rooms`, LiveKit) unchanged.
+`PEER_SIGNAL_ENABLED=false` — Drift live rooms (`/ws/rooms`, broadcast SFU) unchanged.

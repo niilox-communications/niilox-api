@@ -12,7 +12,7 @@ Use this before going to production. Check each box in order.
 
 ## Credentials
 
-- [ ] At least one **API key** (`drift_sk_…`) created and stored server-side only  
+- [ ] At least one **API key** (`niilox_sk_…`) created and stored server-side only  
 - [ ] `/platform/ping` succeeds with key + `X-App-ID`  
 - [ ] API key rotation process documented (create new → deploy → revoke old)  
 
@@ -35,7 +35,7 @@ Storage:
 
 - [ ] Profile after login  
 - [ ] Rooms lobby and go-live  
-- [ ] LiveKit join in your UI  
+- [ ] Niilox livestream join in your UI (`drift` tenant / broadcast SFU)  
 - [ ] Room chat  
 - [ ] Gifts or fiat checkout (per your payment mode)  
 - [ ] VIP / capped events (if applicable) — see integration guide  
@@ -49,15 +49,15 @@ Storage:
 ## Payments
 
 - [ ] [Tenant business](./TENANT_BUSINESS.md) configured (mode, packs)  
-- [ ] Stripe Connect `acct_…` if you collect card payments  
+- [ ] Payment connect account if you collect card payments  
 - [ ] Web and mobile checkout wired per integration guide  
-- [ ] Mobile: RevenueCat — [MOBILE_PAYMENTS.md](./MOBILE_PAYMENTS.md)  
+- [ ] Mobile: `mobile_iap` channel — [MOBILE_PAYMENTS.md](./MOBILE_PAYMENTS.md)  
 
 ## Security
 
-- [ ] Never embed `drift_sk_…` in frontend or Bubble **page** workflows visible to users  
+- [ ] Never embed `niilox_sk_…` in frontend or Bubble **page** workflows visible to users  
 - [ ] CORS: your web origin allowed (contact support if custom domain)  
-- [ ] Webhook signature verification if you proxy Stripe events  
+- [ ] Webhook signature verification if you proxy payment events  
 
 ## Bubble.io (if applicable)
 

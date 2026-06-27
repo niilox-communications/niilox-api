@@ -28,11 +28,11 @@ For historical cutover steps, see [POSTGRES_MIGRATION.md](./POSTGRES_MIGRATION.m
 
 1. **Redirect URI not registered** — add the exact URL from the OAuth link (`redirect_uri=…`) in Google Cloud Console.
 2. **OAuth consent screen in Testing** — add your Gmail under **Test users**, or publish the app.
-| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Magic links — **verify `driftin.live` at [resend.com/domains](https://resend.com/domains)** then set `from` to e.g. `noreply@driftin.live`. Until verified, Resend only delivers to the account owner email. |
-| `RESEND_MAGIC_SUBJECT` | Email subject line (default `sign in to drift`) |
-| `RESEND_MAGIC_APP_NAME` | Brand name in template (default `drift`) |
-| `RESEND_MAGIC_TEMPLATE` | Path to HTML template (default `/opt/drift/templates/email/magic-link.html`) — see `templates/email/README.md` |
-| `AFRICASTALKING_USERNAME` / `AFRICASTALKING_API_KEY` | SMS OTP |
+| Magic link email | Enabled per tenant by Niilox operations (not integrator-configurable) |
+| `NIILOX_MAGIC_SUBJECT` | Email subject line (portal branding) |
+| `NIILOX_MAGIC_APP_NAME` | Brand name in template (portal branding) |
+| `NIILOX_MAGIC_TEMPLATE` | Path to HTML template on the API host |
+| Phone SMS OTP | Enabled per tenant by Niilox operations (not integrator-configurable) |
 | `APPLE_CLIENT_IDS` | Comma-separated iOS bundle IDs (must match the `aud` claim in Apple identity tokens) |
 | `APPLE_CLIENT_ID_GEOGIG` | Optional — GeoGig bundle ID (`cc.nomli.geogig`), merged into `APPLE_CLIENT_IDS` |
 | `APPLE_CLIENT_ID_RODENT` | Optional — Rodent iOS bundle ID, merged into `APPLE_CLIENT_IDS` |

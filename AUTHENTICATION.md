@@ -72,9 +72,9 @@ The `X-App-ID` header is read by `middleware.Tenant`, looked up in `apps.Registr
 - A single identity maps to **different `users.id` rows per tenant** — the same person can hold separate balances on Drift and Rabbaly.
 - User rows are always resolved and written under the active tenant (`app_id`), so issuing tokens for tenant A never affects tenant B.
 
-## LiveKit tokens
+## Broadcast SFU tokens (`drift` tenant only)
 
-LiveKit access is gated by short-lived JWTs minted by `livekit.Service`. Three kinds:
+Niilox livestream access (broadcast SFU) is gated by short-lived JWTs minted server-side. Three kinds:
 
 | Method | Used for | Permissions | TTL |
 |--------|----------|-------------|-----|
@@ -82,7 +82,9 @@ LiveKit access is gated by short-lived JWTs minted by `livekit.Service`. Three k
 | `CreateViewerToken(room, userID)` | `POST /api/v1/rooms/{id}/join` and media-svc watcher | `RoomJoin`, `CanSubscribe` (no publish) | 6h |
 | Internal `adminToken(room)` | RoomService twirp calls (mute, kick, list participants) | `RoomAdmin` | 2 min |
 
-Tokens are HS256-signed with the **tenant's** LiveKit secret (`apps.livekit_secret`), not the global `JWT_SECRET`.
+Tokens are HS256-signed with the **tenant's** SFU secret, not the global `JWT_SECRET`.
+
+> **P2P tenants** (`geogig`, `rodent`, and most partner apps) use peer signaling — not broadcast SFU. See [PEER_SIGNAL.md](./PEER_SIGNAL.md).
 
 ## Admin role
 
@@ -92,5 +94,5 @@ ID-verification review endpoints require an admin account on your tenant. Contac
 
 - **`JWT_SECRET` must be at least 32 random bytes.** If rotated, every issued session JWT is invalidated and users will re-sign-in.
 - **The Drift JWT is unencrypted but signed.** Do not put PII in custom claims.
-- **Webhook auth is per-tenant.** LiveKit webhooks are HMAC-verified against `apps.livekit_secret`, so a rogue tenant cannot spoof events for another.
+- **Webhook auth is per-tenant.** Livestream webhooks are HMAC-verified against the tenant SFU secret, so a rogue tenant cannot spoof events for another.
 - **CORS** allows `APP_URL`, `ADMIN_APP_URL`, and `http://localhost:3000` / `:3001` for dev. The `X-App-ID` header is on the allow list.

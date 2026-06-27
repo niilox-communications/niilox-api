@@ -10,12 +10,12 @@
 | Gigs & sessions | REST + `/ws/me` | Post, accept, check-in/out, reviews |
 | Payments | REST + webhooks | Fiat gig checkout |
 | DMs & social | REST + `/ws/me` | Peer chat between poster and worker |
-| P2P video glance | Rodent peer API | P2P video for gigs — **not LiveKit** |
+| P2P video glance | Rodent peer API | P2P video for gigs |
 | Worker safety | REST | Field-worker safety — contact **dev@niilox.com** |
 | Identity & trust | REST | Bank-verified display name, CV upload, verification country |
 | Push | Native + web | `POST/DELETE /me/push-tokens` (APNs/FCM); web VAPID via `/me/push/subscribe` — SDK `push` |
 
-LiveKit rooms (`/rooms/*`) are **not** used by GeoGig.
+Niilox livestream rooms (`/rooms/*`) are **not** used by GeoGig.
 
 ## Auth
 
@@ -40,7 +40,7 @@ Opens Google OAuth. Callback redirects to `GEOGIG_APP_URL/auth/finish?token=<jwt
 
 ### Phone SMS OTP
 
-Requires Africa's Talking on the API host (`AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY`).
+Requires SMS to be enabled on your tenant (see `GET /api/v1/sms/status` or contact Niilox).
 
 ```bash
 curl -s https://api.driftin.live/api/v1/auth/phone/send \
@@ -84,7 +84,7 @@ Connect: `wss://api.driftin.live/ws/me?token=<access_jwt>`.
 
 ## P2P video glance
 
-GeoGig uses **peer signaling**, not LiveKit. Use the `gigs` and `peer` SDK modules.
+GeoGig uses **peer signaling** for video glance. Use the `gigs` and `peer` SDK modules.
 
 See [PEER_SIGNAL.md](./PEER_SIGNAL.md). Contact **dev@niilox.com** for full examples.
 
@@ -133,7 +133,7 @@ See [WORKER_SAFETY.md](./WORKER_SAFETY.md). Full integration guide: **dev@niilox
 
 - **Developer portal:** https://www.niilox.com (`/portal`, tenant `geogig`)
 - **Ops:** verifications queue, announcements, push categories — grouped under `/ops`
-- **Env on API host:** `GEOGIG_APP_URL`, `CORS_EXTRA_ORIGINS` (web app origin), Africa's Talking keys
+- **Env on API host:** `GEOGIG_APP_URL`, `CORS_EXTRA_ORIGINS` (web app origin)
 
 ## Reference client
 

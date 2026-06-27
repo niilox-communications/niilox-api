@@ -13,7 +13,7 @@ High-level status for integrators. Internal runbooks, migration lists, and deplo
 |-------|--------|-------|
 | **Go API** | **Production** | Multi-tenant, native auth |
 | **Postgres** | **Production** | Primary + replica |
-| **LiveKit (livestream)** | **Production** | Drift tenant |
+| **Niilox livestream (broadcast SFU)** | **Production** | Drift tenant |
 | **Peer / P2P signaling** | **Production** | GeoGig + Rodent tenants |
 | **Developer portal** | **Production** | Keys, billing, docs at www.niilox.com |
 | **`@niilox/sdk`** | **v0.1 beta** | Monorepo install; not on npm yet |
@@ -24,7 +24,7 @@ High-level status for integrators. Internal runbooks, migration lists, and deplo
 
 | Tenant | Product | Capabilities |
 |--------|---------|--------------|
-| `drift` | Drift | LiveKit streaming, chat, gifts, VIP |
+| `drift` | Drift | Niilox livestream, chat, gifts, VIP |
 | `geogig` | GeoGig | Gigs, safety, P2P video |
 | `rodent` | Rodent | Peer sessions, bookings, drop-off |
 | `rabbaly` | Rabbaly | Creator storefront |

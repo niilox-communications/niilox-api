@@ -6,7 +6,7 @@ Build a live-streaming app on Bubble using the Locust API (`api.driftin.live`). 
 
 1. Create a tenant at https://www.niilox.com (`/portal` → create account).  
 2. Note your **`app_id`** (e.g. `myapp`).  
-3. Create an **API key** (`drift_sk_…`) under **API keys** — use it only in **backend** workflows.  
+3. Create an **API key** (`niilox_sk_…`) under **API keys** — use it only in **backend** workflows.  
 4. Read [Getting started](./GETTING_STARTED.md) if you have not called the API yet.
 
 ## Architecture on Bubble
@@ -21,7 +21,7 @@ Build a live-streaming app on Bubble using the Locust API (`api.driftin.live`). 
                             ▼
 ┌─────────────────────────────────────────────────────────┐
 │  Bubble backend workflow (optional, recommended)         │
-│  - drift_sk_… for /platform/* only                       │
+│  - niilox_sk_… for /platform/* only                       │
 │  - Never expose API key to “Current user” on page        │
 └───────────────────────────┬─────────────────────────────┘
                             │
@@ -32,7 +32,7 @@ Build a live-streaming app on Bubble using the Locust API (`api.driftin.live`). 
 
 | Call type | `Authorization` header | Where to run in Bubble |
 |-----------|--------------------------|-------------------------|
-| Platform / usage | `Bearer drift_sk_…` | Backend workflow only |
+| Platform / usage | `Bearer niilox_sk_…` | Backend workflow only |
 | Rooms, chat, gifts, wallet | `Bearer <user_jwt>` | Page or backend (JWT from login) |
 
 ## Step 1 — API Connector (shared settings)
@@ -68,7 +68,7 @@ Liveness (no `/api/v1`, no auth): `https://api.driftin.live/health` → `{"ok":t
 curl -s https://api.driftin.live/health
 
 curl -s https://api.driftin.live/api/v1/platform/ping \
-  -H "Authorization: Bearer drift_sk_YOUR_KEY" \
+  -H "Authorization: Bearer niilox_sk_YOUR_KEY" \
   -H "X-App-ID: your_app_id"
 ```
 
@@ -102,7 +102,7 @@ If you still see *“returns a non-object and you picked JSON”*, the productio
 | Method | GET |
 | URL | `https://api.driftin.live/api/v1/platform/ping` |
 | Header | `X-App-ID` = `your_app_id` (can be a **shared** collection header) |
-| Header | `Authorization: Bearer drift_sk_YOUR_KEY` |
+| Header | `Authorization: Bearer niilox_sk_YOUR_KEY` |
 | **Data type** | **JSON** |
 
 **Initialize call** in the editor. Success body includes `"auth":"api_key"` and `"app_id":"your_app_id"`.
@@ -185,7 +185,7 @@ Optional query: `?category=music` (`fun`, `music`, `sports`, `gossip`, `vibe`, `
 
 Use **Get data from external API** on a repeating group; map JSON list to your UI.
 
-### H. Join room (get LiveKit token)
+### H. Join room (get livestream token)
 
 | Method | POST |
 | URL | `https://api.driftin.live/api/v1/rooms/[room_id]/join` |
@@ -193,7 +193,7 @@ Use **Get data from external API** on a repeating group; map JSON list to your U
 
 Replace `[room_id]` with a dynamic path segment in Bubble (use `[]` for dynamic parts in API Connector).
 
-Response includes LiveKit `token` and `room_name` — pass these into your video plugin (LiveKit-compatible client).
+Response includes `token` and `room_name` — pass these into your Niilox livestream / broadcast SFU client (`drift` tenant only).
 
 ### I. Send chat message
 
@@ -210,7 +210,7 @@ Response includes LiveKit `token` and `room_name` — pass these into your video
 
 Use fields `token_checkout` / `fiat_checkout` and `payment_modes` to show the right purchase UI.
 
-### K. Buy tokens (Stripe redirect)
+### K. Buy tokens (hosted checkout redirect)
 
 | Method | POST |
 | URL | `https://api.driftin.live/api/v1/tokens/checkout` |
@@ -222,7 +222,7 @@ Response includes a **checkout URL**. In Bubble:
 1. Run API Connector action.  
 2. **Navigate to external website** → URL = `checkout_url` from response (or open in new tab).
 
-After payment, Stripe redirects to your configured success URL; refresh `GET /users/me` for updated balance.
+After payment, Niilox hosted checkout redirects to your configured success URL; refresh `GET /users/me` for updated balance.
 
 ### L. Fiat VIP room (card, no token wallet)
 
@@ -231,7 +231,7 @@ After payment, Stripe redirects to your configured success URL; refresh `GET /us
 | Header | `Authorization: Bearer <user_jwt>` |
 | Body | `{"room_id":"<uuid>"}` |
 
-Redirect user to returned checkout URL (same pattern as token checkout). Requires **Stripe Connect** on your tenant — set in portal **Billing**.
+Redirect user to returned checkout URL (same pattern as token checkout). Requires a **payment connect account** on your tenant — set in portal **Billing**.
 
 ### M. Fiat gift
 
@@ -266,7 +266,7 @@ On **402**, show top-up (call **K**) or fiat flow (**L**) depending on `payment_
 
 ### Watch room
 
-1. **Join** → `POST .../join` → store LiveKit token in state.  
+1. **Join** → `POST .../join` → store livestream token in state.  
 2. Initialize your video element / plugin with that token.  
 3. Poll or refresh chat with `GET .../chat` unless you add WebSockets (below).
 
@@ -320,11 +320,11 @@ For B2B tenants, use `portal: "developer"` in the init body when signing in thro
 
 ## Security checklist (Bubble)
 
-- [ ] `drift_sk_…` only in **Backend workflows** → **API Connector** with “Hide from client” / server-only  
+- [ ] `niilox_sk_…` only in **Backend workflows** → **API Connector** with “Hide from client” / server-only  
 - [ ] User JWT in custom state; clear on logout via `POST /auth/logout`  
 - [ ] `X-App-ID` matches your portal tenant on every call  
 - [ ] Do not log full JWT or API key in Bubble debugger for production apps  
-- [ ] Stripe: user completes checkout on Stripe-hosted page (never collect card numbers in Bubble for Locust flows)
+- [ ] Hosted checkout: user completes payment on Niilox-hosted page (never collect card numbers in Bubble for Locust flows)
 
 ---
 
@@ -335,11 +335,11 @@ For B2B tenants, use `portal: "developer"` in the init body when signing in thro
 | `401 Unauthorized` | Refresh JWT; check `Authorization` spelling |
 | Wrong tenant’s data | Set `X-App-ID` to your `app_id`, not `drift` |
 | `402 payment_required` | Top up tokens or use fiat checkout |
-| `fiat checkout disabled` | Portal → Billing → enable hybrid/fiat + Connect |
+| `fiat checkout disabled` | Portal → Billing → enable hybrid/fiat + payment connect account |
 | CORS error in browser | API must allow your Bubble app origin — contact support with your Bubble URL |
 | API Connector “not initialized” | Click **Initialize call** after editing each endpoint |
 | *“returns a non-object and you picked JSON”* on `/health` | Use **JSON** after API deploy, or **Text** on older API; prefer **`/platform/ping`** for key tests |
-| `401` on `/platform/ping` | Missing/wrong `Authorization: Bearer drift_sk_…`, or key not for this `X-App-ID` |
+| `401` on `/platform/ping` | Missing/wrong `Authorization: Bearer niilox_sk_…`, or key not for this `X-App-ID` |
 | `400 unknown app` | Wrong `X-App-ID` or tenant not created in portal |
 
 ---

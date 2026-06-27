@@ -16,7 +16,7 @@ Existing first-party tenants: `drift` (live video), `geogig` (local gigs), `rode
 ## 2. Create an API key
 
 1. Go to **API keys** in the portal.  
-2. **Create key** → copy the secret once (`drift_sk_…`).  
+2. **Create key** → copy the secret once (`niilox_sk_…`).  
 3. Store it in your server env or Bubble **Backend workflow** secrets — never in a public page.
 
 ## 3. Verify connectivity
@@ -26,7 +26,7 @@ curl -s https://api.driftin.live/health
 # {"ok":true}
 
 curl -s https://api.driftin.live/api/v1/platform/ping \
-  -H "Authorization: Bearer drift_sk_YOUR_KEY" \
+  -H "Authorization: Bearer niilox_sk_YOUR_KEY" \
   -H "X-App-ID: myapp"
 ```
 
@@ -87,7 +87,7 @@ In the portal → **Billing**:
 - Set **host / platform split** (not hardcoded 70/30).  
 - Choose **hybrid**, **tokens only**, or **fiat only**.  
 - Add **custom token packs** or use defaults.  
-- Add **Stripe Connect** `acct_…` so card revenue goes to your account (Niilox takes the platform share as a fee).
+- Add **payment connect account** so card revenue goes to your account (Niilox takes the platform share as a fee).
 
 Details: [Tenant business](./TENANT_BUSINESS.md).
 
